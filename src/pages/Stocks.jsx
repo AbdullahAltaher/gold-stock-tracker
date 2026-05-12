@@ -11,7 +11,7 @@ export default function Stocks() {
   const markets = ['ALL', 'DFM', 'ADX']
 
   const filtered = quotes.filter(q => {
-    const mkt = q.symbol?.includes('.DFM') ? 'DFM' : 'ADX'
+    const mkt = q.market ?? (q.symbol?.includes('.DFM') ? 'DFM' : 'ADX')
     if (filter !== 'ALL' && mkt !== filter) return false
     if (search) {
       const sym  = q.symbol?.toLowerCase() ?? ''
