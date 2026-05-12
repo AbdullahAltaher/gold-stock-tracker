@@ -1,39 +1,48 @@
 export const DEFAULT_STOCKS = [
-  { symbol: 'SALIK.DFM',    name: 'Salik',               market: 'DFM' },
-  { symbol: 'PARKN.DFM',    name: 'Parkin',              market: 'DFM' },
-  { symbol: 'EMAAR.DFM',    name: 'Emaar Properties',    market: 'DFM' },
-  { symbol: 'DIB.DFM',      name: 'Dubai Islamic Bank',  market: 'DFM' },
-  { symbol: 'EMIRATES.DFM', name: 'Emirates NBD',        market: 'DFM' },
-  { symbol: 'DU.DFM',       name: 'Emirates Integrated', market: 'DFM' },
-  { symbol: 'DEWA.DFM',     name: 'DEWA',                market: 'DFM' },
-  { symbol: 'FAB.ADX',      name: 'First Abu Dhabi Bank', market: 'ADX' },
-  { symbol: 'ETISALAT.ADX', name: 'e&',                  market: 'ADX' },
-  { symbol: 'ADNOC.ADX',    name: 'ADNOC Distribution',  market: 'ADX' },
+  { symbol: 'SALIK.DFM',  name: 'Salik',               market: 'DFM' },
+  { symbol: 'PARKN.DFM',  name: 'Parkin',              market: 'DFM' },
+  { symbol: 'EMAAR.DFM',  name: 'Emaar Properties',    market: 'DFM' },
+  { symbol: 'DIB.DFM',    name: 'Dubai Islamic Bank',  market: 'DFM' },
+  { symbol: 'DEWA.DFM',   name: 'DEWA',                market: 'DFM' },
+  { symbol: 'FAB.ADX',    name: 'First Abu Dhabi Bank', market: 'ADX' },
+  { symbol: 'ETISALAT.ADX', name: 'e&',                market: 'ADX' },
+  { symbol: 'ADNOC.ADX',  name: 'ADNOC Distribution',  market: 'ADX' },
 ]
+
+const FMP_KEY = import.meta.env.VITE_FMP_KEY
 
 export async function fetchStockQuotes(symbols) {
   if (!symbols || symbols.length === 0) return []
 
-  const joined = symbols.join(',')
-  const urls = [
-    `/api/yahoo/v7/finance/quote?symbols=${encodeURIComponent(joined)}`,
-    `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(joined)}`,
-    `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(joined)}`,
-  ]
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-      if (!res.ok) continue
-      const json = await res.json()
-      const results = json?.quoteResponse?.result
-      if (results && results.length > 0) return results
-    } catch {
-      continue
-    }
+  if (!FMP_KEY) {
+    console.warn('No FMP API key — using demo data')
+    return symbols.map(s => mockQuote(s))
   }
 
-  return symbols.map(s => mockQuote(s))
+  try {
+    const joined = symbols.join(',')
+    const url = `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(joined)}?apikey=${FMP_KEY}`
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return symbols.map(s => mockQuote(s))
+    }
+
+    return data.map(q => ({
+      symbol: q.symbol,
+      shortName: q.name ?? q.symbol.split('.')[0],
+      regularMarketPrice: q.price ?? 0,
+      regularMarketChange: q.change ?? 0,
+      regularMarketChangePercent: q.changesPercentage ?? 0,
+      regularMarketVolume: q.volume ?? 0,
+      currency: 'AED',
+    }))
+  } catch (e) {
+    console.error('FMP API error:', e)
+    return symbols.map(s => mockQuote(s))
+  }
 }
 
 function mockQuote(symbol) {
