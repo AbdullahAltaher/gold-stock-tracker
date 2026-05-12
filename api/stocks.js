@@ -12,93 +12,62 @@ const STOCKS = [
   { symbol: 'ADNOCDIST', name: 'ADNOC Distribution',  market: 'ADX' },
 ]
 
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Origin': 'https://marketwatch.dfm.ae',
+  'Referer': 'https://marketwatch.dfm.ae/',
+}
+
 export default async function handler() {
   try {
-    const results = await Promise.allSettled([
-      fetchDFM(),
-      fetchADX(),
-    ])
+    // DFM official market watch API
+    const res = await fetch(
+      'https://marketwatch.dfm.ae/api/data/equity/equities?lang=en&market=DFM',
+      { headers: HEADERS, signal: AbortSignal.timeout(8000) }
+    )
 
-    const dfmData = results[0].status === 'fulfilled' ? results[0].value : {}
-    const adxData = results[1].status === 'fulfilled' ? results[1].value : {}
-    const combined = { ...dfmData, ...adxData }
+    if (!res.ok) throw new Error(`DFM API ${res.status}`)
+    const json = await res.json()
+    const rows = json?.equities ?? json?.data ?? json ?? []
+
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('Empty response')
+
+    const priceMap = {}
+    for (const row of rows) {
+      const sym = (row.symbol ?? row.Symbol ?? row.ticker ?? '').toUpperCase()
+      const price  = parseFloat(row.last ?? row.close ?? row.lastTradedPrice ?? 0)
+      const change = parseFloat(row.change ?? row.priceChange ?? 0)
+      const pct    = parseFloat(row.changePercent ?? row.percentChange ?? row.changePercentage ?? 0)
+      if (sym && price > 0) priceMap[sym] = { price, change, pct }
+    }
 
     const quotes = STOCKS.map(stock => {
-      const q = combined[stock.symbol.toUpperCase()]
+      const q = priceMap[stock.symbol.toUpperCase()]
       if (!q) return mockQuote(stock)
       return {
         symbol: stock.symbol,
         shortName: stock.name,
         market: stock.market,
-        regularMarketPrice: q.price,
-        regularMarketChange: q.change,
-        regularMarketChangePercent: q.pct,
-        regularMarketVolume: q.volume ?? 0,
+        regularMarketPrice: +q.price.toFixed(3),
+        regularMarketChange: +q.change.toFixed(3),
+        regularMarketChangePercent: +q.pct.toFixed(2),
+        regularMarketVolume: 0,
         currency: 'AED',
         _mock: false,
       }
     })
 
     return new Response(JSON.stringify(quotes), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60',
-      }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=30' }
     })
-  } catch {
+  } catch (e) {
+    console.error('DFM API error:', e.message)
     return new Response(JSON.stringify(STOCKS.map(s => mockQuote(s))), {
       headers: { 'Content-Type': 'application/json' }
     })
   }
-}
-
-async function fetchDFM() {
-  const res = await fetch(
-    'https://www.dfm.ae/en/market/equities/trading-data',
-    {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      signal: AbortSignal.timeout(8000)
-    }
-  )
-  const html = await res.text()
-  return parsePricesFromHTML(html)
-}
-
-async function fetchADX() {
-  const res = await fetch(
-    'https://www.adx.ae/en/markets/equities/listed-securities',
-    {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      signal: AbortSignal.timeout(8000)
-    }
-  )
-  const html = await res.text()
-  return parsePricesFromHTML(html)
-}
-
-function parsePricesFromHTML(html) {
-  const result = {}
-  // Match patterns like: SALIK ... 1.83 ... +0.05 ... +2.81%
-  const rowPattern = /([A-Z]{2,10})\s[\s\S]{0,200}?([\d]+\.[\d]{2,4})\s[\s\S]{0,100}?([+-][\d]+\.[\d]{2,4})\s[\s\S]{0,50}?([+-][\d]+\.[\d]{2,4})%/g
-  let match
-  while ((match = rowPattern.exec(html)) !== null) {
-    const sym    = match[1].toUpperCase()
-    const price  = parseFloat(match[2])
-    const change = parseFloat(match[3])
-    const pct    = parseFloat(match[4])
-    if (price > 0 && price < 1000) {
-      result[sym] = { price, change, pct }
-    }
-  }
-  return result
 }
 
 function mockQuote(stock) {
