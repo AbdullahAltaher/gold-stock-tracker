@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html {
+    background: #0a0b0c;
+    color: #e8e9ea;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0a0b0c;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #141517; }
+  ::-webkit-scrollbar-thumb { background: #2a2b2f; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #ffd700; }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-200 rounded-2xl border border-white/5 p-5;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-gold-400/20 hover:bg-surface-100/60;
+  }
+
+  .btn-gold {
+    @apply bg-gold-gradient text-black font-semibold rounded-xl px-5 py-2.5
+           transition-all duration-200 hover:opacity-90 hover:scale-[1.02]
+           active:scale-95 font-display text-sm;
+  }
+
+  .btn-ghost {
+    @apply text-white/60 hover:text-white rounded-xl px-4 py-2
+           transition-colors text-sm font-medium;
+  }
+
+  .btn-outline {
+    @apply border border-white/10 text-white/80 hover:border-gold-400/40
+           hover:text-gold-400 rounded-xl px-4 py-2 transition-all text-sm;
+  }
+
+  .input-dark {
+    @apply bg-surface-300 border border-white/10 rounded-xl px-4 py-2.5 text-white
+           placeholder-white/30 focus:outline-none focus:border-gold-400/50
+           focus:ring-1 focus:ring-gold-400/20 transition-all text-sm w-full;
+  }
+
+  .label {
+    @apply text-white/50 text-xs font-medium uppercase tracking-wider mb-1.5 block;
+  }
+
+  .gold-text {
+    @apply text-transparent bg-clip-text;
+    background-image: linear-gradient(135deg, #ffd700 0%, #f5c400 60%, #d4a000 100%);
+  }
+
+  .stat-up   { @apply text-emerald-400; }
+  .stat-down { @apply text-red-400; }
+  .stat-flat { @apply text-white/40; }
+
+  .skeleton {
+    @apply bg-white/5 rounded-lg animate-pulse;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150
+           text-white/50 hover:text-white hover:bg-white/5 text-sm font-medium;
+  }
+
+  .nav-item-active {
+    @apply nav-item text-gold-400 bg-gold-400/10 hover:bg-gold-400/10;
+  }
+
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .ticker-inner {
+    display: inline-flex;
+    animation: ticker 30s linear infinite;
+  }
+}
+
+/* Gold shimmer text effect */
+.shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    #ffd700 0%,
+    #fffbe0 40%,
+    #ffd700 80%,
+    #d4a000 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Page entry animation */
+.page-enter {
+  animation: fadeInUp 0.35s ease forwards;
+}
+
+/* Card gold glow */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.15),
+              0 0 60px rgba(255, 215, 0, 0.05);
+}
+
+/* Subtle grid background pattern */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
